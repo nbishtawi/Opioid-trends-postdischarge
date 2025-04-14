@@ -1,0 +1,16 @@
+# R Markdown outputs
+*.html
+*.nb.html
+
+# R temporary files
+.Rproj.user/
+.Rhistory
+.RData
+.Ruserdata
+
+# System files
+.DS_Store
+Thumbs.db
+
+# IDE project files
+*.Rproj
