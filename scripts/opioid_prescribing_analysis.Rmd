@@ -1,0 +1,210 @@
+---
+title: "Opioid Prescribing Trends"
+author: "Nadeem Bishtawi"
+date: "2025-04-14"
+output: html_document
+---
+
+# Introduction
+
+This report analyzes opioid prescribing patterns among post-discharge hospital patients using administrative health data. The visualizations highlight patient characteristics, common diagnoses, and prescribing trends in relation to age, length of stay, and type of hospital admission.
+
+The analysis focuses on the following questions:
+
+- What are the most common diagnoses among patients receiving opioids?
+- What do patient profiles reveal in terms of complexity and length of stay?
+- How does opioid prescribing vary across age groups?
+- Do admission categories (elective vs. emergency) show differences in prescribing patterns?
+
+# Libraries
+
+```{r setup, warning=FALSE, message = FALSE}
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(treemapify)
+library(stringr)
+library(readxl)
+```
+
+# Data Setup
+
+> 📌 NOTE: The dataset used in this project is confidential and cannot be shared.  
+> The cleaned dataset was prepared in a separate file (`PIN DAD Linkage.Rmd`) and includes de-identified hospital discharge data with the following columns:
+
+- `gender`: Male/Female
+- `age`: Patient age in years
+- `age_group`: Binned age categories (e.g., 0–17, 18–35, etc.)
+- `admission_type`: Elective or Emergency
+- `length_of_stay`: Number of days admitted
+- `num_diagnoses`: Total number of diagnoses per patient
+- `DAD_DXCODE1`: Most responsible ICD-10-CA diagnosis code
+- `drug_name`: Prescribed medication name
+- `drug_class`: Drug classification (e.g., Opioid, NSAID)
+- `opioid_type`: Type of opioid (e.g., strong, weak)
+- `label`: Diagnosis description (mapped from ICD-10-CA code using the Cancer Care Ontario lookup)
+
+Diagnosis codes (`DAD_DXCODE1`) were mapped to clinical labels using the official ICD-10-CA Appendix from Cancer Care Ontario (Appendix 1.18).
+
+If this were a reproducible version, the cleaned dataset would be imported using:
+
+```{r}
+# df <- read_csv("data/cleaned_opioid_dataset.csv")
+#icd_lookup <- read_excel("data/CCO_DBK_Appendix_1-18_AUG_19.xlsx",sheet = 2, skip = 1)
+```
+
+# Data Cleaning
+
+The raw dataset was cleaned and filtered in a separate file (`PIN DAD Linkage.Rmd`) prior to generating the visualizations in this report.
+
+Key cleaning steps included:
+
+- Filtering for patients with at least one opioid prescription at discharge.
+- Excluding irrelevant drug classes and focusing on opioids, NSAIDs, psycholeptics, psychoanaleptics, and anesthetics.
+- Recoding ICD-10 diagnosis codes into readable categories for visualization.
+- Creating new variables such as `age_group`, `admission_type`, and `opioid_type`.
+- Removing or correcting missing and implausible values (e.g., `age > 120`, blank diagnosis).
+- Summarizing each patient as a single row with relevant clinical and prescription features.
+- Deriving the number of diagnoses per patient using:
+```{r}
+df$n_diagnoses <- apply(df[, grepl("DAD_DXCODE", names(df))], 1, function(x) sum(!is.na(x)))
+
+df <- df %>%
+  mutate(n_diagnoses = apply(select(., all_of(dx_cols)), 1, function(x) sum(!is.na(x))))
+```
+- Mapping ICD10-CA codes to diagnosis using:
+```{r}
+icd_lookup_clean <- icd_lookup %>%
+  rename(code = `ICD10CA Code`, label = `Short Description`)
+
+# Left join onto main dataset
+df <- df %>%
+  left_join(icd_lookup_clean, by = c("DAD_DXCODE1" = "code"))
+```
+
+# Visualizations
+
+## 1. Number of Diagnoses Distribution
+
+This histogram shows the distribution of the number of diagnoses recorded per patient. It helps visualize how complex the average patient profile is, based on how many distinct diagnoses were documented.
+
+```{r diagnoses-distribution, fig.width=7, fig.height=5}
+ggplot(df, aes(x = n_diagnoses)) +
+  geom_histogram(binwidth = 1, fill = "#69b3a2", color = "black") +
+  labs(title = "Number of Diagnoses per Opioid Patient",
+       x = "Number of Diagnoses", y = "Patient Count") +
+  theme_minimal() 
+```
+
+## 2. Top 10 Primary Diagnoses (ICD-10)
+
+This bar chart displays the ten most common primary diagnoses among post-discharge patients. Understanding which clinical conditions are most associated with opioid prescriptions helps contextualize prescribing patterns.
+
+```{r top10-diagnoses, fig.width=8, fig.height=5}
+top_dx <- df %>%
+  count(label, sort = TRUE) %>%
+  slice_max(n, n = 10)
+
+ggplot(top_dx, aes(x = reorder(label, n), y = n)) +
+  geom_col(fill = "#ff9999") +
+  coord_flip() +
+  labs(
+    title = "Top 10 Primary Diagnoses for Opioid Prescriptions",
+    x = "Diagnosis (ICD-10-CA)",
+    y = "Number of Patients"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.y = element_text(size = 9),
+    plot.margin = margin(t = 1, r = 1, b = 1, l = 1.5, unit = "cm")
+  )
+```
+
+## 3. Treemap of Primary Diagnoses
+
+This treemap displays the top 10 most frequent diagnoses among post-discharge patients receiving opioid prescriptions. Each rectangle's size reflects the number of patients associated with that diagnosis, and labels were obtained from the ICD-10-CA reference file.
+
+```{r treemap-diagnoses, fig.width=8, fig.height=6}
+top_dx_treemap <- df %>%
+  count(label, sort = TRUE) %>%
+  slice_max(n, n = 10)
+
+# Create treemap
+ggplot(top_dx_treemap, aes(
+  area = n,
+  fill = label,
+  label = str_wrap(label, 30)
+)) +
+  geom_treemap() +
+  geom_treemap_text(
+    colour = "white",
+    place = "centre",
+    grow = TRUE,
+    reflow = TRUE
+  ) +
+  labs(
+    title = "Top 10 Diagnoses for Opioid Prescriptions (Treemap)"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+## 4. Opioid Prescriptions by Age Group
+
+This bar chart shows the number of opioid prescriptions across different age groups. It helps highlight which demographic groups are more likely to receive opioids following hospital discharge.
+
+
+```{r opioid-by-age-group, fig.width=8, fig.height=5}
+df %>%
+  mutate(Age_Group = cut(PIN_AGE, breaks = seq(0, 100, by = 10))) %>%
+  count(Age_Group) %>%
+  ggplot(aes(x = Age_Group, y = n)) +
+  geom_col(fill = "#66c2a5") +
+  labs(title = "Opioid Prescriptions by Age Group",
+       x = "Age Group", y = "Number of Patients") +
+  theme_minimal()
+```
+
+## 5. Admission Category Breakdown
+
+This bar chart shows the number of opioid prescriptions by hospital admission category. Comparing elective and emergency admissions provides insight into how prescribing patterns may differ based on the nature of the hospitalization.
+
+```{r admission-category, fig.width=7, fig.height=5}
+df %>%
+  count(DAD_ADMT_CAT_NM) %>%
+  ggplot(aes(x = reorder(DAD_ADMT_CAT_NM, n), y = n)) +
+  geom_col(fill = "#8da0cb") +
+  coord_flip() +
+  labs(title = "Admission Categories for Opioid Patients",
+       x = "Admission Type", y = "Count") +
+  theme_minimal()
+```
+
+## 6. Length of Stay Distribution
+
+This histogram shows the distribution of hospital length of stay among patients who were discharged with an opioid prescription. It helps identify whether prescribing is more common after short-term or extended hospitalizations.
+
+```{r length-of-stay, fig.width=8, fig.height=5}
+# 6. Length of Stay Distribution
+ggplot(df, aes(x = DAD_LOS)) +
+  geom_histogram(binwidth = 1, fill = "#fc8d62", color = "black") +
+  labs(title = "Distribution of Length of Stay for Opioid Patients",
+       x = "Length of Stay (Days)", y = "Count") +
+  theme_minimal()
+```
+
+
+# Observations
+
+- Most patients prescribed opioids had between 2 and 6 recorded diagnoses, suggesting moderate clinical complexity.
+- The most common primary diagnoses included respiratory conditions (e.g., COPD, pneumonia), musculoskeletal issues (e.g., gonarthrosis), and post-surgical recovery.
+- Opioid prescriptions were most frequent among patients aged 50–79, with noticeably lower use in patients under 35.
+- Emergency admissions accounted for a larger share of opioid prescribing compared to elective admissions.
+- Most patients had relatively short hospital stays (less than 10 days), indicating opioids are often prescribed following brief inpatient encounters.
+
+# Limitations
+
+- The dataset does not contain dosage, strength, or duration of opioid prescriptions, limiting assessment of overall opioid burden.
+- Prescription patterns may reflect institutional practices or patient preferences not captured in the data.
+- The analysis is descriptive and does not assess causality or patient outcomes.
+- The underlying dataset cannot be publicly shared, which may limit reproducibility.
