@@ -29,7 +29,7 @@ Six visualizations are included in the analysis:
 
 ---
 
-## 🧪 Data & Methods
+## Data & Methods
 
 - Data was pre-processed separately (`PIN DAD Linkage.Rmd`) to create derived variables (e.g., `n_diagnoses`, `age_group`, `opioid_type`).
 - Diagnosis codes (`DAD_DXCODE1`) were mapped to readable clinical labels using the official **ICD-10-CA Appendix 1.18** from [Cancer Care Ontario](https://ext.cancercare.on.ca/ext/databook/db2122/Appendix/Appendix_1.18_-_ICD10CA_.htm).
