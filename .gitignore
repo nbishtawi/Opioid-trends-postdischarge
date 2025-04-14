@@ -1,5 +1,4 @@
 # R Markdown outputs
-*.html
 *.nb.html
 
 # R temporary files
