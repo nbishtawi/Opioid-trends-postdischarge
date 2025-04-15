@@ -68,9 +68,6 @@ Key cleaning steps included:
 - Deriving the number of diagnoses per patient using:
 ```{r}
 df$n_diagnoses <- apply(df[, grepl("DAD_DXCODE", names(df))], 1, function(x) sum(!is.na(x)))
-
-df <- df %>%
-  mutate(n_diagnoses = apply(select(., all_of(dx_cols)), 1, function(x) sum(!is.na(x))))
 ```
 - Mapping ICD10-CA codes to diagnosis using:
 ```{r}
