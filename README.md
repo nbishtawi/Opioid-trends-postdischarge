@@ -39,6 +39,7 @@ Six visualizations are included in the analysis:
 ## Data Privacy Notice
 
 Due to data-sharing restrictions, the underlying dataset is not included in this repository. However, all code, plots, and the ICD-10 reference table used are provided for full transparency and reproducibility (where permitted).
+> The HTML report (`opioid_prescribing_analysis.html`) was rendered locally using the restricted dataset and included here as an output artifact. No raw data is embedded in this file.
 
 ## Author
 Nadeem Bishtawi
