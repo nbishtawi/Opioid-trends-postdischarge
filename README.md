@@ -36,6 +36,27 @@ Six visualizations are included in the analysis:
 
 ---
 
+## Repository Structure
+
+```
+Opioid-trends-postdischarge/
+├── data/ # (If populated, raw or processed datasets would go here)
+├── figures/ # Generated plots and visualizations
+│ ├── admission_category.png
+│ ├── diagnoses_distribution.png
+│ ├── length_of_stay_distribution.png
+│ ├── opioid_by_age_group.png
+│ ├── top10_diagnoses.png
+│ └── treemap_diagnoses.png
+├── scripts/
+│ ├── opioid_prescribing_analysis.Rmd # Main R Markdown analysis
+│ └── opioid_prescribing_analysis.html # Rendered HTML report
+├── README.md # Project documentation
+└── .gitignore # Git ignore file
+```
+
+--- 
+
 ## Data Privacy Notice
 
 Due to data-sharing restrictions, the underlying dataset is not included in this repository. However, all code, plots, and the ICD-10 reference table used are provided for full transparency and reproducibility (where permitted).
